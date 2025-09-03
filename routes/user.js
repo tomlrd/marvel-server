@@ -102,4 +102,118 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// TOGGLE FAVORITE (COMIC OU CHARACTER)
+router.post("/favorites/:id", isAuthenticated, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type } = req.body; // 'comic' ou 'character'
+    const userId = req.user._id;
+
+    if (!type || !["comic", "character"].includes(type)) {
+      return res
+        .status(400)
+        .json({ message: "Type invalide. Doit être 'comic' ou 'character'" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    const favoritesArray = user.favorites[type + "s"]; // 'comics' ou 'characters'
+    const itemIndex = favoritesArray.indexOf(id);
+
+    if (itemIndex > -1) {
+      // Retirer l'élément des favoris
+      favoritesArray.splice(itemIndex, 1);
+    } else {
+      // Ajouter l'élément aux favoris
+      favoritesArray.push(id);
+    }
+
+    await user.save();
+    return res.status(200).json({
+      message:
+        itemIndex > -1
+          ? `${type} retiré des favoris`
+          : `${type} ajouté aux favoris`,
+      favorites: user.favorites,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+// GET FAVORITES WITH FULL DATA (Nouvelle route optimisée)
+router.get("/favorites", isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Récupérer l'utilisateur avec ses favoris
+    const user = await User.findById(userId).select("favorites");
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    // Récupérer les données complètes des favoris en parallèle
+    const [charactersData, comicsData] = await Promise.all([
+      // Récupérer les personnages favoris depuis l'API Marvel
+      user.favorites.characters.length > 0
+        ? Promise.all(
+            user.favorites.characters.map(async (id) => {
+              try {
+                const url = `${process.env.MARVEL_API_URI}/character/${id}?apiKey=${process.env.MARVEL_API_KEY}`;
+                const response = await require("axios").get(url);
+                return response.data.results?.[0] || null;
+              } catch (error) {
+                console.error(
+                  `Erreur lors de la récupération du personnage ${id}:`,
+                  error.message
+                );
+                return null;
+              }
+            })
+          )
+        : [],
+
+      // Récupérer les comics favoris depuis l'API Marvel
+      user.favorites.comics.length > 0
+        ? Promise.all(
+            user.favorites.comics.map(async (id) => {
+              try {
+                const url = `${process.env.MARVEL_API_URI}/comic/${id}?apiKey=${process.env.MARVEL_API_KEY}`;
+                const response = await require("axios").get(url);
+                return response.data.results?.[0] || null;
+              } catch (error) {
+                console.error(
+                  `Erreur lors de la récupération du comic ${id}:`,
+                  error.message
+                );
+                return null;
+              }
+            })
+          )
+        : [],
+    ]);
+
+    // Filtrer les résultats null et retourner la structure optimisée
+    const validCharacters = charactersData.filter((char) => char !== null);
+    const validComics = comicsData.filter((comic) => comic !== null);
+
+    return res.status(200).json({
+      favorites: {
+        characters: validCharacters,
+        comics: validComics,
+      },
+      counts: {
+        characters: validCharacters.length,
+        comics: validComics.length,
+      },
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des favoris:", error);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

@@ -8,8 +8,14 @@ const userSchema = new mongoose.Schema({
     trim: true,
   },
   favorites: {
-    type: [String],
-    default: [],
+    comics: {
+      type: [String],
+      default: [],
+    },
+    characters: {
+      type: [String],
+      default: [],
+    },
   },
   token: {
     type: String,
