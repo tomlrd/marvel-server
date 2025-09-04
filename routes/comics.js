@@ -4,6 +4,21 @@ const axios = require("axios");
 const apiKey = process.env.MARVEL_API_KEY;
 const apiUri = process.env.MARVEL_API_URI;
 
+// Route de test pour vérifier la configuration
+router.get("/test", async (req, res) => {
+  try {
+    console.log("API Key:", apiKey ? "Présente" : "Manquante");
+    console.log("API URI:", apiUri);
+    return res.status(200).json({
+      message: "Configuration OK",
+      hasApiKey: !!apiKey,
+      apiUri: apiUri,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 // Route : /comics - Get a list of comics
 router.get("/", async (req, res) => {
   try {
@@ -36,7 +51,7 @@ router.post("/byIds", async (req, res) => {
         const url = `${apiUri}/comic/${id}?apiKey=${apiKey}`;
         const response = await axios.get(url);
         // L'API peut retourner soit directement l'objet, soit { results: [...] }
-        const comic =  response.data;
+        const comic = response.data;
         return comic || null;
       } catch (error) {
         console.error(
@@ -59,15 +74,18 @@ router.post("/byIds", async (req, res) => {
   }
 });
 
-// Route : /comic/:comicId - Get specific comic information
-router.get("/:comicId", async (req, res) => {
+// Route : /comics/comic/:comicId - Get specific comic information
+router.get("/comic/:comicId", async (req, res) => {
   try {
     const { comicId } = req.params;
     const url = `${apiUri}/comic/${comicId}?apiKey=${apiKey}`;
 
+    console.log("URL appelée pour comic:", url);
     const response = await axios.get(url);
+    console.log("Réponse reçue pour comic:", response.status);
     return res.status(200).json(response.data);
   } catch (error) {
+    console.error("Erreur lors de la récupération du comic:", error.message);
     return res.status(500).json({ message: error.message });
   }
 });

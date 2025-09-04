@@ -4,6 +4,21 @@ const axios = require("axios");
 const apiKey = process.env.MARVEL_API_KEY;
 const apiUri = process.env.MARVEL_API_URI;
 
+// Route de test pour vérifier la configuration
+router.get("/test", async (req, res) => {
+  try {
+    console.log("API Key:", apiKey ? "Présente" : "Manquante");
+    console.log("API URI:", apiUri);
+    return res.status(200).json({
+      message: "Configuration OK",
+      hasApiKey: !!apiKey,
+      apiUri: apiUri,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 // Route : /characters - Get a list of characters
 router.get("/", async (req, res) => {
   try {
@@ -32,6 +47,10 @@ router.get("/:characterId", async (req, res) => {
     const response = await axios.get(url);
     return res.status(200).json(response.data);
   } catch (error) {
+    console.error(
+      "Erreur lors de la récupération du personnage:",
+      error.message
+    );
     return res.status(500).json({ message: error.message });
   }
 });
