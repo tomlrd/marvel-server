@@ -10,7 +10,11 @@ const app = express();
 // Configuration CORS
 app.use(
   cors({
-    origin: [process.env.CORS_ORIGIN],
+    origin: [
+      process.env.CORS_ORIGIN,
+      "https://marvel-tomlrd.netlify.app",
+      "http://localhost:5173",
+    ],
     methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -20,6 +24,14 @@ app.use(express.json());
 
 const startServer = async () => {
   try {
+    console.log("🚀 Server starting...");
+    console.log("CORS_ORIGIN from env:", process.env.CORS_ORIGIN);
+    console.log("✅ Authorized origins:", [
+      process.env.CORS_ORIGIN,
+      "https://marvel-tomlrd.netlify.app",
+      "http://localhost:5173",
+    ]);
+
     await mongoose.connect(process.env.MONGODB_URI);
 
     const charactersRoutes = require("./routes/characters");
